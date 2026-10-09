@@ -1,5 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=AIsur_x1
+#SBATCH -A coc
+#SBATCH -q coe-ice
+#SBATCH -p coe-gpu
 #SBATCH -t 5:00:00
 #SBATCH --gres=gpu:3
 #SBATCH -C "H200"

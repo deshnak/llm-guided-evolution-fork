@@ -1,5 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=LLMGE01_Server
+#SBATCH -A coc
+#SBATCH -q coe-ice
+#SBATCH -p coe-gpu
 #SBATCH -t 8:00:00
 #SBATCH --nodes=1
 #SBATCH -G 2

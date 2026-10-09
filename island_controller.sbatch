@@ -1,5 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=Island_controller
+#SBATCH -A coc
+#SBATCH -q coe-ice
+#SBATCH -p pace-cpu
 #SBATCH -N1 --ntasks-per-node=4
 #SBATCH --mem=16G
 #SBATCH --time=8:00:00

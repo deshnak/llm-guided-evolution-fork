@@ -3,6 +3,12 @@ islands_bash_script: '#!/bin/bash
 
     #SBATCH --job-name=Islands_script
 
+    #SBATCH -A coc
+
+    #SBATCH -q coe-ice
+
+    #SBATCH -p pace-cpu
+
     #SBATCH -N1 --ntasks-per-node=16
 
     #SBATCH --mem=16G
@@ -10,8 +16,6 @@ islands_bash_script: '#!/bin/bash
     #SBATCH --time=8:00:00
 
     #SBATCH --output=run_job_outputs/islands/Report_islands-%j.out
-
-    #SBATCH --gres=gpu:1
 
     #SBATCH -C intel
 
@@ -37,6 +41,12 @@ islands_bash_script: '#!/bin/bash
 llm_bash_script: '#!/bin/bash
 
     #SBATCH --job-name=llm_oper
+
+    #SBATCH -A coc
+
+    #SBATCH -q coe-ice
+
+    #SBATCH -p pace-cpu
 
     #SBATCH -t 8:00:00
 
@@ -75,11 +85,13 @@ python_bash_script: '#!/bin/bash
 
     #SBATCH --job-name=evaluateGene
 
+    #SBATCH -A coc
+
+    #SBATCH -q coe-ice
+
+    #SBATCH -p pace-cpu
+
     #SBATCH -t 4:00:00
-
-    #SBATCH --gres=gpu:1
-
-    #SBATCH -G 1
 
     #SBATCH --mem 16G
 

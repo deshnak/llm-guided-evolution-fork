@@ -1,5 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=llm_opt
+#SBATCH -A coc
+#SBATCH -q coe-ice
+#SBATCH -p pace-cpu
 #SBATCH -t 8:00:00
 #SBATCH --mem 16G
 #SBATCH -c 4
