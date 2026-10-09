@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier to raise validation accuracy on the 3-class Seeds task while adding as few gates as possible.
+
+The current code block:
+```python
+{} 
+```

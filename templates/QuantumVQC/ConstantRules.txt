@@ -1,0 +1,15 @@
+Quantum VQC hard rules:
+1. Return exactly one complete Python code block and no prose outside the code block.
+2. This code replaces only the shown block inside a Qiskit variational quantum classifier module; keep the block self-contained and keep every function name and signature it defines.
+3. The module is split into these blocks: feature_map(qc, x), n_layer_params(n_qubits) and variational_layer(qc, params), entangle(qc), N_LAYERS and build_circuit(n_qubits), readout(sv, n_classes), train(cost_fn, n_params, rng, max_passes). Other blocks still call the functions in the shown block, so their behavior contract must hold.
+4. The circuit has 7 qubits, one per input feature. Features arrive as angles in [0, pi].
+5. build_circuit must return (qc, x_params, theta_params): a QuantumCircuit, a list of exactly 7 input Parameters, and a list of trainable Parameters. Every trainable Parameter must appear in the circuit.
+6. n_layer_params(n_qubits) must return exactly how many entries of params variational_layer reads.
+7. readout(sv, n_classes) receives a qiskit Statevector and must return n_classes non-negative probabilities that sum to 1.
+8. train(cost_fn, n_params, rng, max_passes) must return a 1-D numpy array of length n_params. Each call to cost_fn is one full pass over the training set, and the budget is max_passes calls; extra calls stop training early. Use rng for any randomness.
+9. Use only numpy, scipy, and qiskit. Do not load data, read files, print, or touch training, validation, or test data directly.
+10. Do not add measurements, barriers, resets, or classical bits. Build gates with QuantumCircuit methods such as ry, rz, rx, cx, cz.
+11. Do not leave ellipses, placeholders, TODOs, incomplete calls, unmatched parentheses, or markdown inside the Python code.
+12. Keep the code short enough to finish in one response.
+
+Let us think through this step by step:

@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier to reduce overfitting and improve generalization from the 126 training samples to unseen samples.
+
+The current code block:
+```python
+{} 
+```

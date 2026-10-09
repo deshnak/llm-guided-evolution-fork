@@ -1,0 +1,6 @@
+Improve this block of a Qiskit variational quantum classifier to achieve higher overall accuracy on classifying the 3 wheat varieties in the Seeds dataset.
+
+The current code block:
+```python
+{} 
+```

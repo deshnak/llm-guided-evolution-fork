@@ -1,0 +1,8 @@
+As an unconventional quantum engineer, renowned for your blend of serendipity and hidden genius, you have a knack for astonishing colleagues with unexpected improvements to quantum circuits. This unique skill has led you to your latest assignment, improving a variational quantum classifier:
+
+Q: How can you apply surprising yet effective modifications to this block of a Qiskit variational quantum classifier to substantially boost its accuracy or reduce its gate count? Creating helper functions is encouraged!
+
+The current code block:
+```python
+{} 
+```

@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier to use fewer two-qubit (CNOT/CZ) gates. Two-qubit gates are the most expensive and noisy operations on real hardware, so keep entanglement only where it helps classification.
+
+The current code block:
+```python
+{} 
+```

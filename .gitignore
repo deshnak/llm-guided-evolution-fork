@@ -12,6 +12,7 @@ sota/Pointnet_Pointnet2_pytorch/results/
 first_test/
 data/
 !sota/Titanic/data/
+!sota/QuantumVQC/data/
 .DS_Store
 mistralai
 **/*.egg-info

@@ -1,0 +1,6 @@
+Replace the approach in this block of a Qiskit variational quantum classifier with a different, stronger design from the quantum machine learning literature (for example data re-uploading, a different ansatz, or a different entangling pattern). Adding helper functions is encouraged.
+
+The current code block:
+```python
+{} 
+```

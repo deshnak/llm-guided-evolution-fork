@@ -1,0 +1,6 @@
+Edit this block of a Qiskit variational quantum classifier to achieve Pareto-optimal performance: maximize classification accuracy while minimizing the total number of gates in the circuit.
+
+The current code block:
+```python
+{} 
+```

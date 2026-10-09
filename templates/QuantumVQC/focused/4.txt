@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier so it reaches a lower training loss within the fixed training budget. Better parameter initialization, a better optimizer setup, or a circuit that is easier to train are all valid.
+
+The current code block:
+```python
+{} 
+```

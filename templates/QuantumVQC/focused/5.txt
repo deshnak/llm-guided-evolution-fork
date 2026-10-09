@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier to find a better trade-off between classification accuracy and circuit size. A smaller circuit with equal accuracy, or a more accurate circuit with only a small size increase, both count as improvements.
+
+The current code block:
+```python
+{} 
+```

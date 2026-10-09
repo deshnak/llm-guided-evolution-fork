@@ -1,0 +1,8 @@
+As a leading authority in quantum machine learning and variational circuit design, your deep expertise in ansatz construction, data encoding, entanglement structure, and trainability has made you the go-to expert for quantum architecture search. You have now been tasked with improving a variational quantum classifier:
+
+Q: How can you apply meaningful modifications to this block of a Qiskit variational quantum classifier to substantially raise its accuracy on the Seeds task while keeping the gate count low?
+
+The current code block:
+```python
+{} 
+```

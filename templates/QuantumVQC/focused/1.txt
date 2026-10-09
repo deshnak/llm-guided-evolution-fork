@@ -1,0 +1,6 @@
+Modify this block of a Qiskit variational quantum classifier so the full circuit uses fewer gates, without lowering validation accuracy on the 3-class Seeds task. Removing redundant rotations or entangling gates is the priority.
+
+The current code block:
+```python
+{} 
+```

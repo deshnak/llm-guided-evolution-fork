@@ -33,6 +33,7 @@ dependencies = [
     "tensorflow>=2.20.0",
     "streamlit>=1.58.0",
     "jsonschema",
+    "qiskit>=2.0",
 ]
 
 [tool.pytest.ini_options]
