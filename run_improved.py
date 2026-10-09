@@ -89,6 +89,8 @@ def update_ancestry(gene_id_child, gene_id_parent, ancestry, mutation_type=None,
     dict
         Ancestry dictionary
     """
+    if gene_id_parent not in ancestry:
+        ancestry[gene_id_parent] = {'GENES': [gene_id_parent], 'MUTATE_TYPE': ['UNKNOWN']}
     # Common part for both functionalities
     ancestry[gene_id_child] = copy.deepcopy(ancestry[gene_id_parent])
     # Handle the specifics for either part 1 or part 2
