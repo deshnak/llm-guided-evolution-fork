@@ -130,6 +130,8 @@ def generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES, SOTA_ROOT, SEED_NETWORK,
         The template text for the mutation
     mutation_type : str
         The type of mutation generated
+    prompt_template : str
+        Template path relative to templates/ (e.g. QuantumVQC/focused/1.txt)
     """
     if (PROB_EOT > np.random.uniform()) and (GEN_COUNT > 0):
         print("\t‣ EoT")
@@ -146,6 +148,7 @@ def generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES, SOTA_ROOT, SEED_NETWORK,
             eot_template_txt = file.read()
         template_txt = eot_template_txt.format(x, y, "{}")
         mute_type = "EoT"
+        prompt_template = "EoT/EoT.txt"
     else:
         print("\t‣ Normal Prompts")
         prompt_templates = glob.glob(os.path.join(ROOT_DIR, PROMPT_GLOB), recursive=True)
@@ -154,6 +157,8 @@ def generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES, SOTA_ROOT, SEED_NETWORK,
         template_path = np.random.choice(prompt_templates)
         print(f"\t‣ Prompt template: {os.path.relpath(template_path, ROOT_DIR)}")
         mute_type = os.path.basename(template_path).split('.')[0]  # Assuming the file extension needs to be removed
+        # Path relative to templates/, unique across prompt groups (basenames are not)
+        prompt_template = os.path.relpath(template_path, os.path.join(ROOT_DIR, 'templates'))
         with open(template_path, 'r') as file:
             template_txt = file.read()
         rules_path = globals().get("CONSTANT_RULES_PATH", "templates/ConstantRules.txt")
@@ -162,7 +167,7 @@ def generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES, SOTA_ROOT, SEED_NETWORK,
         with open(rules_path, 'r') as file:
             rules_txt = file.read()
         template_txt = f'{template_txt}\n{rules_txt}'
-    return template_txt, mute_type
+    return template_txt, mute_type, prompt_template
 
 def write_bash_script(llm_model,
                       job_name,
@@ -187,11 +192,12 @@ def write_bash_script(llm_model,
     gene_id_parent = fetch_gene(input_filename_x)
     gene_id_child = fetch_gene(output_filename)
     if python_file=='src/llm_mutation.py':
-        template_txt, mute_type = generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES, 
+        template_txt, mute_type, prompt_template = generate_template(PROB_EOT, GEN_COUNT, TOP_N_GENES,
                                                     SOTA_ROOT, SEED_NETWORK, ROOT_DIR, llm_model)
         if GEN_COUNT >= 0: # this does not need to happen at creation of population
-            GLOBAL_DATA_ANCESTRY = update_ancestry(gene_id_child, gene_id_parent, GLOBAL_DATA_ANCESTRY, 
+            GLOBAL_DATA_ANCESTRY = update_ancestry(gene_id_child, gene_id_parent, GLOBAL_DATA_ANCESTRY,
                                                     mutation_type=mute_type, gene_id_parent2=None)
+        GLOBAL_DATA_ANCESTRY.setdefault(gene_id_child, {})['PROMPT_TEMPLATE'] = prompt_template
         out_dir = os.path.join(OUTPUT_DIR, str(GENERATION))
         file_path = os.path.join(out_dir, f'{gene_id_child}_model.txt')
         os.makedirs(out_dir, exist_ok=True)
@@ -203,7 +209,8 @@ def write_bash_script(llm_model,
         gene_id_parent2 = fetch_gene(input_filename_y)
         GLOBAL_DATA_ANCESTRY = update_ancestry(gene_id_child, gene_id_parent, GLOBAL_DATA_ANCESTRY, 
                                                 mutation_type=None, gene_id_parent2=gene_id_parent2)
-        
+        GLOBAL_DATA_ANCESTRY[gene_id_child]['PROMPT_TEMPLATE'] = "CrossOver"
+
         temp_text = f"{python_file} {input_filename_x} {input_filename_y} {output_filename} --top_p {top_p} --temperature {temperature}"
         python_runline = f"uv run python {temp_text} --apply_quality_control '{QC_CHECK_BOOL}' --llm_model {llm_model}"
     else:
@@ -417,8 +424,9 @@ def create_individual(container, llm_model, temp_min=0.05, temp_max=0.4):
                                             top_p=0.1, temperature=temperature)
     GLOBAL_DATA[gene_id] = {'sub_flag':successful_sub_flag, 'job_id':job_id, 
                             'status':'subbed file', 'fitness':None, 'start_time':time.time()}
-    GLOBAL_DATA_ANCESTRY[gene_id] = {'GENES':[gene_id], 'MUTATE_TYPE':["CREATED"]}
-    
+    prompt_template = GLOBAL_DATA_ANCESTRY.get(gene_id, {}).get('PROMPT_TEMPLATE')
+    GLOBAL_DATA_ANCESTRY[gene_id] = {'GENES':[gene_id], 'MUTATE_TYPE':["CREATED"], 'PROMPT_TEMPLATE':prompt_template}
+
     individual = container([gene_id])  # Assign a file ID
     
     if DELAYED_CHECK:
