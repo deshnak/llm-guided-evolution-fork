@@ -114,6 +114,7 @@ def circuit_metrics(model):
         "gate_count_no_encoding": sum(1 for g in gates if not is_encoding(g)),
         "encoding_gate_count": sum(1 for g in gates if is_encoding(g)),
         "two_qubit_gate_count": sum(1 for g in gates if len(g.qubits) == 2),
+        "nonlocal_gate_count": qc.num_nonlocal_gates(),
         "depth": qc.depth(),
         "n_params": len(model[2]),
     }

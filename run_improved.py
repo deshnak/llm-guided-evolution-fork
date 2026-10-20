@@ -29,6 +29,7 @@ DEFAULT_LLM_MODEL = globals().get("LLM_MIXTRAL", globals().get("LLM_MODEL", None
 AVAILABLE_LLM_MODELS = globals().get("ISLAND_LLMS", [])
 if not AVAILABLE_LLM_MODELS and globals().get("LLM_MODEL"):
     AVAILABLE_LLM_MODELS = [globals()["LLM_MODEL"]]
+QD_MODE = globals().get("QD_MODE", False)
 
 LLM_SERVER_READY = False
 
@@ -558,6 +559,15 @@ def check4results(gene_id):
         
         GLOBAL_DATA[gene_id]['status'] = 'completed'
         GLOBAL_DATA[gene_id]['fitness'] = fitness
+        if QD_MODE:
+            # MAP-Elites coordinates, computed by the fixed scoring header of the circuit file
+            try:
+                with open(f'{SOTA_ROOT}/results/{gene_id}_metrics.json', 'r') as file:
+                    metrics = json.load(file)
+                nonlocal_gates = metrics.get('nonlocal_gate_count', metrics['two_qubit_gate_count'])
+                GLOBAL_DATA[gene_id]['qd_coords'] = (nonlocal_gates, metrics['depth'])
+            except (OSError, KeyError, ValueError) as err:
+                print(f'\t☠ No QD coordinates for {gene_id}: {err}')
         # print(f'Model from Gene: {gene_id} Evaluated')
     elif job_done is False:
         GLOBAL_DATA[gene_id]['status'] = 'completed'
@@ -953,6 +963,9 @@ def save_checkpoint(gen, folder_name="checkpoints", global_path=None, checkpoint
                 "GLOBAL_DATA_HIST": GLOBAL_DATA_HIST,
                 "GLOBAL_DATA_ANCESTRY": GLOBAL_DATA_ANCESTRY
             }
+        if QD_MODE:
+            # global data is shared by all islands, so keep one archive per island folder
+            stored_global_data.setdefault("QD_ARCHIVE", {})[folder_name] = QD_ARCHIVE
 
         with open(global_file, 'wb') as file:
             pickle.dump(stored_global_data, file)
@@ -1017,6 +1030,39 @@ def true_nsga2(pop, k):
     new_pop = tools.selTournamentDCD(pop, k) # mults of 4
     return new_pop
 
+def qd_cell(coords):
+    """Map (non-local gate count, depth) to a MAP-Elites cell, clamping to the edge bins."""
+    cell = []
+    for value, (lo, hi) in zip(coords, (QD_NONLOCAL_GATE_RANGE, QD_DEPTH_RANGE)):
+        idx = int((value - lo) / (hi - lo) * QD_GRID_SIZE)
+        cell.append(min(max(idx, 0), QD_GRID_SIZE - 1))
+    return tuple(cell)
+
+def qd_update(archive, population):
+    """Insert evaluated individuals into the archive and print its summary."""
+    for ind in population:
+        data = GLOBAL_DATA.get(ind[0], {})
+        fitness = data.get('fitness')
+        if data.get('status') != 'completed' or 'qd_coords' not in data or fitness is None or not np.all(np.isfinite(fitness)):
+            continue
+        cell = qd_cell(data['qd_coords'])
+        holder = archive.get(cell)
+        # fitness is (1 - val acc, gate count): higher accuracy wins, ties go to fewer gates
+        if holder is None or tuple(fitness) < tuple(holder['fitness']):
+            archive[cell] = {'gene_id': ind[0], 'fitness': tuple(fitness), 'coords': data['qd_coords']}
+    best = min(archive.values(), key=lambda c: c['fitness']) if archive else None
+    best_acc = f"{1 - best['fitness'][0]:.4f} ({best['gene_id']})" if best else "n/a"
+    print(f"QD archive: {len(archive)}/{QD_GRID_SIZE ** 2} cells occupied, best val acc: {best_acc}", flush=True)
+
+def qd_select(archive, k):
+    """Pick k parents uniformly at random from the occupied archive cells."""
+    parents = []
+    for holder in random.choices(list(archive.values()), k=k):
+        ind = creator.Individual([holder['gene_id']])
+        ind.fitness.values = holder['fitness']
+        parents.append(ind)
+    return parents
+
 def create_population(n, llm_model):
     individual_func = partial(toolbox.individual, llm_model=llm_model)
     return tools.initRepeat(list, individual_func, n)
@@ -1044,6 +1090,7 @@ GLOBAL_DATA = {}
 GLOBAL_DATA_HIST = {}
 GLOBAL_DATA_ANCESTRY = {}
 GLOBAL_DATA_ANCESTRY[MODEL] = {'GENES':[MODEL], 'MUTATE_TYPE':["CREATED"]}
+QD_ARCHIVE = {}  # (nonlocal gate bin, depth bin) -> {'gene_id', 'fitness', 'coords'}
 
 # Main Evolution Loop
 if __name__ == "__main__":
@@ -1077,6 +1124,7 @@ if __name__ == "__main__":
         GLOBAL_DATA = global_data["GLOBAL_DATA"]
         GLOBAL_DATA_HIST = global_data["GLOBAL_DATA_HIST"]
         GLOBAL_DATA_ANCESTRY = global_data["GLOBAL_DATA_ANCESTRY"]
+        QD_ARCHIVE = global_data.get("QD_ARCHIVE", {}).get(args.checkpoints, {})
         population = population_data["population"]
         hof = population_data["hof"]
     else:
@@ -1093,6 +1141,8 @@ if __name__ == "__main__":
         ind.fitness.values = PLACEHOLDER_FITNESS
         
     check_and_update_fitness(population)
+    if QD_MODE:
+        qd_update(QD_ARCHIVE, population)
     # Evolution
     for gen in range(start_gen, num_generations if migration_gen == 0 else ((start_gen + migration_gen - 1) // migration_gen) * migration_gen + 1):
         GEN_COUNT = gen
@@ -1118,6 +1168,7 @@ if __name__ == "__main__":
             GLOBAL_DATA = {}
             GLOBAL_DATA_HIST = {}
             GLOBAL_DATA_ANCESTRY = {}
+            QD_ARCHIVE = {}
             start_gen = 0
             population = toolbox.population(n=start_population_size, llm_model=llm_model)
             delayed_creation_check(population)
@@ -1135,7 +1186,10 @@ if __name__ == "__main__":
         elites = tools.selSPEA2(population, num_elites)
         
         # Select the next generation's parents
-        if len(population) < population_size:
+        if QD_MODE and QD_ARCHIVE:
+            print(f"Selecting {population_size} offspring from {len(QD_ARCHIVE)} archive cells")
+            offspring = qd_select(QD_ARCHIVE, population_size)
+        elif len(population) < population_size:
             print(f"Selecting {len(population)} offspring")
             offspring = toolbox.select(population, len(population) - (len(population) % 4))
         else:
@@ -1190,7 +1244,12 @@ if __name__ == "__main__":
             When it hits the below in check_and_update_fitness it will load the results from the dict 
                 if GLOBAL_DATA[gene_id]['status'] == "completed":
             """
-           
+
+        if QD_MODE:
+            # Archive parents kept unchanged may be from older generations, bring back their history too
+            for ind in offspring:
+                if ind[0] not in GLOBAL_DATA and ind[0] in GLOBAL_DATA_HIST:
+                    GLOBAL_DATA[ind[0]] = GLOBAL_DATA_HIST[ind[0]]
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
@@ -1207,6 +1266,8 @@ if __name__ == "__main__":
         # Gather all the fitnesses in one list and print the stats
         print_scores(population, FITNESS_WEIGHTS)
         hof.update(population)
+        if QD_MODE:
+            qd_update(QD_ARCHIVE, population)
         save_checkpoint(gen, folder_name=args.checkpoints, global_path=args.global_path)
         LINKED_GENES = {}
         # mutate x prompts

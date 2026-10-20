@@ -34,8 +34,15 @@ DEFAULT_PROMPT_GROUP = "QuantumVQC"
 PROMPTS = f"templates/{DEFAULT_PROMPT_GROUP}/*/*.txt"
 CONSTANT_RULES_PATH = "templates/QuantumVQC/ConstantRules.txt"
 
+# Quality-diversity (MAP-Elites) parent selection instead of NSGA-II
+QD_MODE = False
+QD_GRID_SIZE = 6
+# (lo, hi) bin range per archive axis; values outside are clamped to the edge bins
+QD_NONLOCAL_GATE_RANGE = (0, 24)
+QD_DEPTH_RANGE = (0, 24)
+
 # TODO: Adding this here, I think it's supposed to parse from the command line
-OUTPUT_DIR = "quantum_vqc_output"
+OUTPUT_DIR = "quantum_vqc_qd_output" if QD_MODE else "quantum_vqc_output"
 PORT = int(os.getenv("LLMGE_PORT", "8137"))
 
 LLM_MODEL = 'llama3.3'
