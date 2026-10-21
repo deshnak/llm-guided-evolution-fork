@@ -4,6 +4,8 @@ Everything above the first option marker is fixed: data loading, forward
 simulation, the training budget, scoring and result writing. The blocks
 below it define the circuit and the training procedure.
 """
+import hashlib
+import inspect
 import json
 import os
 
@@ -120,6 +122,17 @@ def circuit_metrics(model):
     }
 
 
+def fingerprint(model, data):
+    """Hash of the readout probabilities at fixed inputs and parameters, plus the train() source."""
+    X = data["train"][0][:24]
+    h = hashlib.md5()
+    for seed in (7, 11):
+        theta = np.random.default_rng(seed).uniform(0, 2 * np.pi, len(model[2]))
+        h.update(np.round(forward(model, theta, X), 4).tobytes())
+    h.update(" ".join(inspect.getsource(train).split()).encode())
+    return h.hexdigest()
+
+
 def train_one_start(model, data, seed):
     X_train, y_train = data["train"]
     budget = Budget(len(X_train))
@@ -162,6 +175,20 @@ def main(gene_id="seed", data_path=DEFAULT_DATA, results_dir="results"):
     model = build_circuit(N_QUBITS)
     assert len(model[1]) == N_FEATURES, "circuit must take one input parameter per feature"
 
+    # Set by the orchestrator when duplicate checking is on: fingerprints already evaluated this run
+    seen_path = os.environ.get("LLMGE_SEEN_FINGERPRINTS")
+    if seen_path:
+        fp = fingerprint(model, data)
+        seen = set()
+        if os.path.exists(seen_path):
+            with open(seen_path) as f:
+                seen = set(f.read().split())
+        if fp in seen:
+            metrics = {"gene_id": gene_id, "fingerprint": fp, "duplicate": True, **circuit_metrics(model)}
+            metrics["obj1"], metrics["obj2"] = np.inf, np.inf
+            write_results(gene_id, metrics, results_dir)
+            return metrics
+
     starts = [train_one_start(model, data, s) for s in START_SEEDS]
     metrics = {"gene_id": gene_id, "pass_budget": PASS_BUDGET, "start_seeds": START_SEEDS}
     for key in [k for k in starts[0] if k != "seed"]:
@@ -173,6 +200,8 @@ def main(gene_id="seed", data_path=DEFAULT_DATA, results_dir="results"):
     # Selection objectives (both minimized). Test metrics are never used here.
     metrics["obj1"] = 1.0 - metrics["val_acc_mean"]
     metrics["obj2"] = metrics["gate_count"]
+    if seen_path:
+        metrics["fingerprint"] = fp
     write_results(gene_id, metrics, results_dir)
     return metrics
 

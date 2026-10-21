@@ -40,9 +40,11 @@ QD_GRID_SIZE = 6
 # (lo, hi) bin range per archive axis; values outside are clamped to the edge bins
 QD_NONLOCAL_GATE_RANGE = (0, 24)
 QD_DEPTH_RANGE = (0, 24)
+# Skip training circuits whose behavior was already evaluated this run (QD_MODE only)
+QD_DEDUP = False
 
 # TODO: Adding this here, I think it's supposed to parse from the command line
-OUTPUT_DIR = "quantum_vqc_qd_output" if QD_MODE else "quantum_vqc_output"
+OUTPUT_DIR = "quantum_vqc_qd_dedup_output" if QD_MODE and QD_DEDUP else "quantum_vqc_qd_output" if QD_MODE else "quantum_vqc_output"
 PORT = int(os.getenv("LLMGE_PORT", "8137"))
 
 LLM_MODEL = 'llama3.3'
